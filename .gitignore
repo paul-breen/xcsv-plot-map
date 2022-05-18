@@ -1,0 +1,11 @@
+.env
+*.pyc
+tmp/
+__pycache__/
+*egg-info/
+dist/
+example_data/
+.pytest_cache/
+xcsv/__init__.py
+xcsv/plot/__init__.py
+xcsv/plot/__main__.py

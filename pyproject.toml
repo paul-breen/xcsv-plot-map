@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "xcsv-plot-map"
+version = "0.1.0"
+description = "Subpackage to plot and locate on a map, data from extended CSV (XCSV) files"
+authors = ["Paul Breen <pbree@bas.ac.uk>"]
+readme = "README.md"
+license = "Apache-2.0"
+repository = "https://github.com/paul-breen/xcsv-plot-map"
+homepage = "https://github.com/paul-breen/xcsv-plot-map"
+documentation = "https://github.com/paul-breen/xcsv-plot-map/blob/main/README.md"
+packages = [
+  {include = "xcsv/plot_map"}
+]
+
+[tool.poetry.scripts]
+xcsv_plot = "xcsv.plot_map.__main__:main"
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+xcsv-plot = "^0.1.0"
+matplotlib = "^3.5.2"
+Cartopy = "^0.20.2"
+scipy = "^1.8.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

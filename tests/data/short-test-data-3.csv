@@ -1,0 +1,14 @@
+# id: 3
+# title: The title
+# summary: This dataset...
+# The second summary paragraph.
+# : The third summary paragraph.  Escaped because it contains the delimiter in a URL https://dummy.domain
+# authors: A B, C D
+# latitude: -74.45 (degree_north)
+# longitude: -78.16 (degree_east)
+# elevation: 1006 (m a.s.l.)
+# [a]: 2012 not a complete year
+time (year) [a],depth (m)
+2012,1.600
+2011,3.200
+2010,5.050
