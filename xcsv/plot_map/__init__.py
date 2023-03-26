@@ -119,7 +119,7 @@ class Plot(xp.Plot):
         if add_gridlines:
             ax.gridlines()
 
-    def plot_site(self, fig, ax, dataset, xkey='longitude', ykey='latitude', site_key='site', color='C0', linewidth=2, marker='o', transform=None, xoffset=0, yoffset=-0.5, fontsize='large', horizontalalignment='left'):
+    def plot_site(self, fig, ax, dataset, xkey='longitude', ykey='latitude', site_key='site', transform=None, xoffset=0, yoffset=-0.5, fontsize='large', horizontalalignment='left', opts={}):
         """
         Plot the site information for the given dataset on the map
 
@@ -135,12 +135,6 @@ class Plot(xp.Plot):
         :type ykey: str
         :param site_key: The header item key for the site identifier
         :type site_key: str
-        :param color: A unique color to identify this site
-        :type color: str
-        :param linewidth: The linewidth of the site marker on the map
-        :type linewidth: int
-        :param marker: The marker symbol for the site on the map
-        :type marker: str
         :param transform: The projection to transform the coordinates on the
         map.  If not specified, it defaults to ccrs.PlateCarree()
         :type transform: cartopy.crs.CRS
@@ -153,6 +147,8 @@ class Plot(xp.Plot):
         :param horizontalalignment: Horizontal position of the site text
         relative to the marker
         :type horizontalalignment: str
+        :param opts: Option kwargs to apply to all plots (e.g., color, marker)
+        :type opts: dict
         """
 
         if not transform:
@@ -162,8 +158,9 @@ class Plot(xp.Plot):
         lon = [float(dataset.metadata['header'][xkey]['value'])]
         lat = [float(dataset.metadata['header'][ykey]['value'])]
         site = self.get_metadata_item_value(dataset, site_key)
+        color = opts['color'] if 'color' in opts else 'C0'
 
-        ax.plot(lon, lat, color=color, linewidth=linewidth, marker=marker, transform=transform)
+        ax.plot(lon, lat, transform=transform, **opts)
         ax.text(lon[0] + xoffset, lat[0] + yoffset, site, color=color, fontsize=fontsize, horizontalalignment=horizontalalignment, transform=transform)
 
     def setup_figure_and_axes(self, figsize=None, width_ratios=[1,1], projection=None):
@@ -198,7 +195,7 @@ class Plot(xp.Plot):
         self.axs.append(self.fig.add_subplot(gs[0, 0]))
         self.axs.append(self.fig.add_subplot(gs[0, 1], projection=projection))
 
-    def plot_datasets(self, datasets, fig=None, axs=None, axs_idx=0, map_axs_idx=1, xcol=None, ycol=None, xidx=None, yidx=0, xlabel=None, ylabel=None, title=None, title_wrap=True, caption=None, label_key=None, invert_xaxis=False, invert_yaxis=False, show=True):
+    def plot_datasets(self, datasets, fig=None, axs=None, axs_idx=0, map_axs_idx=1, xcol=None, ycol=None, xidx=None, yidx=0, xlabel=None, ylabel=None, title=None, title_wrap=True, caption=None, label_key=None, invert_xaxis=False, invert_yaxis=False, show=True, opts={}):
         """
         Plot the data for the given datasets
 
@@ -254,6 +251,8 @@ class Plot(xp.Plot):
         :type invert_yaxis: bool
         :param show: Show the plot
         :type show: bool
+        :param opts: Option kwargs to apply to all plots (e.g., color, marker)
+        :type opts: dict
         """
  
         if fig:
@@ -268,6 +267,7 @@ class Plot(xp.Plot):
         self.datasets = datasets
         self.xcol = xcol
         self.ycol = ycol
+        generate_colors = True
 
         if not title:
             title = self.get_metadata_item_value(datasets[0], self.DEFAULTS['title_key'])
@@ -291,15 +291,21 @@ class Plot(xp.Plot):
         if not ylabel:
             ylabel = self.ycol
 
+        if 'color' in opts:
+            generate_colors = False
+
         self.fig.suptitle(title, wrap=title_wrap)
         self.setup_data_plot(self.fig, self.axs[axs_idx], caption=caption, xlabel=xlabel, ylabel=ylabel)
         self.setup_site_plot(self.fig, self.axs[map_axs_idx], self.get_site_plot_extent(datasets))
 
         for i, dataset in enumerate(datasets):
             label = self.get_metadata_item_value(dataset, label_key)
-            color = f'C{i}'
-            self.plot_data(self.fig, self.axs[axs_idx], dataset, self.xcol, self.ycol, label=label, color=color, invert_xaxis=invert_xaxis, invert_yaxis=invert_yaxis)
-            self.plot_site(self.fig, self.axs[map_axs_idx], dataset, color=color)
+
+            if generate_colors:
+                opts.update({'color': f'C{i}'})
+
+            self.plot_data(self.fig, self.axs[axs_idx], dataset, self.xcol, self.ycol, label=label, invert_xaxis=invert_xaxis, invert_yaxis=invert_yaxis, opts=opts)
+            self.plot_site(self.fig, self.axs[map_axs_idx], dataset, opts=opts)
 
         if show:
             plt.show()
