@@ -72,7 +72,7 @@ then the columns to be used for the x- and y-axes can be specified thus:
 python3 -m xcsv.plot_map -x 0 -y 1 input.csv
 """
 
-    parser = argparse.ArgumentParser(description='plot the given XCSV files and locate the data on a map', epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(description='plot the given XCSV files and locate the data on a map', epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter, prog='xcsv_plot_map')
 
     parser.add_argument('in_file', help='input XCSV file(s)', nargs='+')
 
@@ -103,6 +103,8 @@ python3 -m xcsv.plot_map -x 0 -y 1 input.csv
 
     parser.add_argument('-P', '--plot-options', help="options for the plot, specified as a simple JSON object", dest='plot_opts', default={}, type=json.loads)
     parser.add_argument('-S', '--scatter-plot', help="set plot options (see -P) to produce a scatter plot", dest='plot_opts', action='store_const', const={'marker': '.', 'ls': ''})
+
+    parser.add_argument('-V', '--version', action='version', version=f"%(prog)s {xpm.__version__}")
 
     args = parser.parse_args()
 
