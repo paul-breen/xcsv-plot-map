@@ -114,7 +114,11 @@ def main():
     plotter = xpm.Plot()
 
     if args.figsize or args.projection:
-        projection = xpm.Plot().get_crs_class_from_string(args.projection)
+        if args.projection:
+            projection = xpm.Plot().get_crs_class_from_string(args.projection)
+        else:
+            projection = None
+
         plotter.setup_figure_and_axes(figsize=args.figsize, projection=projection)
 
     plotter.plot_datasets(datasets, xidx=args.xidx, yidx=args.yidx, xcol=args.xcol, ycol=args.ycol, xlabel=args.xlabel, ylabel=args.ylabel, title=args.title, title_wrap=True, caption=args.caption, label_key=args.label_key, invert_xaxis=args.invert_xaxis, invert_yaxis=args.invert_yaxis, show=False)
