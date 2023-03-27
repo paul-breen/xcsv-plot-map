@@ -17,9 +17,10 @@ xcsv_plot_map = "xcsv.plot_map.__main__:main"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
-xcsv-plot = "^0.1.0"
+xcsv-plot = "^0.2.0"
 matplotlib = "^3.5.2"
-Cartopy = "^0.20.2"
+Cartopy = "^0.21.1"
+shapely = "^2.0.1"
 scipy = "^1.8.1"
 
 [tool.poetry.dev-dependencies]
