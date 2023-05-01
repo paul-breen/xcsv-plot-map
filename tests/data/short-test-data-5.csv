@@ -1,0 +1,16 @@
+# id: 5
+# title: The title
+# summary: This dataset...
+# The second summary paragraph.
+# : The third summary paragraph.  Escaped because it contains the delimiter in a URL https://dummy.domain
+# authors: A B, C D
+# geospatial_lon_min: -78.16 (degree_east)
+# geospatial_lon_max: -65.46 (degree_east)
+# geospatial_lat_min: -74.45 (degree_north)
+# geospatial_lat_max: -73.86 (degree_north)
+# elevation: 1139 (m a.s.l.)
+# [a]: 2012 not a complete year
+time (year) [a],depth (m)
+2012,2.325
+2011,3.625
+2010,6.725

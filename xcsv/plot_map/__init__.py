@@ -12,6 +12,7 @@ import re
 
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
+from shapely import geometry
 
 import xcsv
 import xcsv.plot as xp
@@ -48,9 +49,40 @@ class Plot(xp.Plot):
 
         return crs_class
 
-    def get_site_plot_extent(self, datasets, xkey='longitude', ykey='latitude', offset=5):
+    def _get_site_plot_extent(self, datasets, keys, offset):
         """
-        Get the extent over which the datasets range in geographical coordinates
+        Get the extent over which the datasets range in geographical
+        coordinates, either point or bounding box, given the appropriate
+        header keys
+
+        A list is returned with the shape [left, right, bottom, top].  This
+        can be used for the extent value to set_extent().
+
+        :param datasets: A list of XCSV objects containing the input datasets
+        :type datasets: list
+        :param keys: An ordered list of keys, giving [xmin,xmax,ymin,ymax]
+        :type keys: list
+        :param offset: An offset (in degrees) to apply around the given keys
+        :type offset: float
+        :returns: The extent
+        :rtype: list
+        """
+
+        extent = []
+
+        # The default value returned from get_metadata_item_value() if the
+        # key doesn't exist, is None.  Hence we catch TypeError
+        try:
+            extent = [min([float(dataset.get_metadata_item_value(keys[0])) for dataset in datasets]) - offset, max([float(dataset.get_metadata_item_value(keys[1])) for dataset in datasets]) + offset, min([float(dataset.get_metadata_item_value(keys[2])) for dataset in datasets]) - offset, max([float(dataset.get_metadata_item_value(keys[3])) for dataset in datasets]) + offset]
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"Cannot calculate map extent as some of the required spatial coordinate keys were not found in the header. Exception: {e}")
+
+        return extent
+
+    def get_site_plot_extent_from_point(self, datasets, xkey='longitude', ykey='latitude', offset=5):
+        """
+        Get the extent over which the datasets range in point geographical
+        coordinates
 
         A list is returned with the shape [left, right, bottom, top].  This
         can be used for the extent value to set_extent().
@@ -67,10 +99,75 @@ class Plot(xp.Plot):
         :rtype: list
         """
 
-        # N.B.: We don't use the "safe" get_metadata_item_value() here,
-        #       because if the dataset doesn't contain lon and lat, then
-        #       we can't display on a map, so best to quit immediately
-        extent = [min([float(dataset.metadata['header'][xkey]['value']) for dataset in datasets]) - offset, max([float(dataset.metadata['header'][xkey]['value']) for dataset in datasets]) + offset, min([float(dataset.metadata['header'][ykey]['value']) for dataset in datasets]) - offset, max([float(dataset.metadata['header'][ykey]['value']) for dataset in datasets]) + offset]
+        keys = [xkey, xkey, ykey, ykey]
+
+        return self._get_site_plot_extent(datasets, keys, offset)
+
+    def get_site_plot_extent_from_bbox(self, datasets, xminkey='geospatial_lon_min', xmaxkey='geospatial_lon_max', yminkey='geospatial_lat_min', ymaxkey='geospatial_lat_max', offset=5):
+        """
+        Get the extent over which the datasets range in bounding box
+        geographical coordinates
+
+        A list is returned with the shape [left, right, bottom, top].  This
+        can be used for the extent value to set_extent().
+
+        :param datasets: A list of XCSV objects containing the input datasets
+        :type datasets: list
+        :param xminkey: The header item key for the minimum coordinate in
+        the x-direction
+        :type xminkey: str
+        :param xmaxkey: The header item key for the maximum coordinate in
+        the x-direction
+        :type xmaxkey: str
+        :param yminkey: The header item key for the minimum coordinate in
+        the y-direction
+        :type yminkey: str
+        :param ymaxkey: The header item key for the maximum coordinate in
+        the y-direction
+        :type ymaxkey: str
+        :param offset: An offset (in degrees) to apply around the given bbox
+        :type offset: float
+        :returns: The extent
+        :rtype: list
+        """
+
+        keys = [xminkey, xmaxkey, yminkey, ymaxkey]
+
+        return self._get_site_plot_extent(datasets, keys, offset)
+
+    def get_site_plot_extent(self, datasets, point_test_key='longitude', bbox_test_key='geospatial_lon_min'):
+        """
+        Get the extent over which the datasets range in geographical
+        coordinates, either point or bounding box
+
+        A list is returned with the shape [left, right, bottom, top].  This
+        can be used for the extent value to set_extent().
+
+        :param datasets: A list of XCSV objects containing the input datasets
+        :type datasets: list
+        :param point_test_key: The header item key to test whether coordinates
+        are given as a point
+        :type point_test_key: str
+        :param bbox_test_key: The header item key to test whether coordinates
+        are given as a bounding box
+        :type bbox_test_key: str
+        :returns: The extent
+        :rtype: list
+        """
+
+        extent = []
+
+        try:
+            test_dataset = datasets[0]
+        except IndexError:
+            raise KeyError(f"Cannot calculate map extent as no datasets were provided")
+
+        if point_test_key in test_dataset.metadata['header']:
+            extent = self.get_site_plot_extent_from_point(datasets)
+        elif bbox_test_key in test_dataset.metadata['header']:
+            extent = self.get_site_plot_extent_from_bbox(datasets)
+        else:
+            raise KeyError(f"Cannot calculate map extent as required spatial coordinate keys were not found in the header")
 
         return extent
 
@@ -119,7 +216,7 @@ class Plot(xp.Plot):
         if add_gridlines:
             ax.gridlines()
 
-    def plot_site(self, fig, ax, dataset, xkey='longitude', ykey='latitude', site_key='site', transform=None, xoffset=0, yoffset=-0.5, fontsize='large', horizontalalignment='left', opts={}):
+    def plot_point_site(self, fig, ax, dataset, xkey='longitude', ykey='latitude', site_key='site', transform=None, xoffset=0, yoffset=-0.5, fontsize='large', horizontalalignment='left', opts={}):
         """
         Plot the site information for the given dataset on the map
 
@@ -154,14 +251,121 @@ class Plot(xp.Plot):
         if not transform:
             transform = ccrs.PlateCarree()
 
-        # Don't mask the case of no lon/lat, let it fail if they're not present
-        lon = [float(dataset.metadata['header'][xkey]['value'])]
-        lat = [float(dataset.metadata['header'][ykey]['value'])]
-        site = self.get_metadata_item_value(dataset, site_key)
+        site = dataset.get_metadata_item_value(site_key)
         color = opts['color'] if 'color' in opts else 'C0'
+        marker = opts['marker'] if 'marker' in opts else 'o'
 
-        ax.plot(lon, lat, transform=transform, **opts)
-        ax.text(lon[0] + xoffset, lat[0] + yoffset, site, color=color, fontsize=fontsize, horizontalalignment=horizontalalignment, transform=transform)
+        try:
+            lon = [float(dataset.get_metadata_item_value(xkey))]
+            lat = [float(dataset.get_metadata_item_value(ykey))]
+
+            ax.plot(lon, lat, transform=transform, color=color, marker=marker)
+            ax.text(lon[0] + xoffset, lat[0] + yoffset, site, color=color, fontsize=fontsize, horizontalalignment=horizontalalignment, transform=transform)
+        except KeyError:
+            pass
+
+    def plot_bbox_site(self, fig, ax, dataset, xminkey='geospatial_lon_min', xmaxkey='geospatial_lon_max', yminkey='geospatial_lat_min', ymaxkey='geospatial_lat_max', site_key='site', transform=None, xoffset=0, yoffset=-0.5, fontsize='large', horizontalalignment='left', opts={}):
+        """
+        Plot the site information for the given dataset on the map
+
+        :param fig: The figure object
+        :type fig: matplotlib.figure.Figure
+        :param ax: The axis object
+        :type ax: matplotlib.axes.Axes
+        :param dataset: The dataset to plot
+        :type dataset: XCSV object
+        :param xminkey: The header item key for the minimum coordinate in
+        the x-direction
+        :type xminkey: str
+        :param xmaxkey: The header item key for the maximum coordinate in
+        the x-direction
+        :type xmaxkey: str
+        :param yminkey: The header item key for the minimum coordinate in
+        the y-direction
+        :type yminkey: str
+        :param ymaxkey: The header item key for the maximum coordinate in
+        the y-direction
+        :type ymaxkey: str
+        :param site_key: The header item key for the site identifier
+        :type site_key: str
+        :param transform: The projection to transform the coordinates on the
+        map.  If not specified, it defaults to ccrs.PlateCarree()
+        :type transform: cartopy.crs.CRS
+        :param xoffset: An x-direction offset for the site text from the marker
+        :type xoffset: float
+        :param yoffset: An y-direction offset for the site text from the marker
+        :type yoffset: float
+        :param fontsize: Font size of the site text
+        :type fontsize: str
+        :param horizontalalignment: Horizontal position of the site text
+        relative to the marker
+        :type horizontalalignment: str
+        :param opts: Option kwargs to apply to all plots (e.g., color, marker)
+        :type opts: dict
+        """
+
+        if not transform:
+            transform = ccrs.PlateCarree()
+
+        site = dataset.get_metadata_item_value(site_key)
+        color = opts['color'] if 'color' in opts else 'C0'
+        marker = opts['marker'] if 'marker' in opts else 'o'
+        alpha = opts['alpha'] if 'alpha' in opts else 0.5
+
+        try:
+            lon_min = float(dataset.get_metadata_item_value(xminkey))
+            lon_max = float(dataset.get_metadata_item_value(xmaxkey))
+            lat_min = float(dataset.get_metadata_item_value(yminkey))
+            lat_max = float(dataset.get_metadata_item_value(ymaxkey))
+
+            geom = geometry.box(minx=lon_min, maxx=lon_max, miny=lat_min, maxy=lat_max)
+            ax.add_geometries([geom], crs=transform, facecolor=color, edgecolor='black', alpha=alpha)
+            ax.text(lon_min + xoffset, lat_min + yoffset, site, color=color, fontsize=fontsize, horizontalalignment=horizontalalignment, transform=transform)
+        except KeyError:
+            pass
+
+    def plot_site(self, fig, ax, dataset, point_test_key='longitude', bbox_test_key='geospatial_lon_min', site_key='site', transform=None, xoffset=0, yoffset=-0.5, fontsize='large', horizontalalignment='left', opts={}):
+        """
+        Plot the site information for the given dataset on the map
+
+        :param fig: The figure object
+        :type fig: matplotlib.figure.Figure
+        :param ax: The axis object
+        :type ax: matplotlib.axes.Axes
+        :param dataset: The dataset to plot
+        :type dataset: XCSV object
+        :param point_test_key: The header item key to test whether coordinates
+        are given as a point
+        :type point_test_key: str
+        :param bbox_test_key: The header item key to test whether coordinates
+        are given as a bounding box
+        :type bbox_test_key: str
+        :param site_key: The header item key for the site identifier
+        :type site_key: str
+        :param transform: The projection to transform the coordinates on the
+        map.  If not specified, it defaults to ccrs.PlateCarree()
+        :type transform: cartopy.crs.CRS
+        :param xoffset: An x-direction offset for the site text from the marker
+        :type xoffset: float
+        :param yoffset: An y-direction offset for the site text from the marker
+        :type yoffset: float
+        :param fontsize: Font size of the site text
+        :type fontsize: str
+        :param horizontalalignment: Horizontal position of the site text
+        relative to the marker
+        :type horizontalalignment: str
+        :param opts: Option kwargs to apply to all plots (e.g., color, marker)
+        :type opts: dict
+        """
+
+        # Plot according to whether site coordinates are given by a point
+        # or a bounding box
+        if point_test_key in dataset.metadata['header']:
+            self.plot_point_site(fig, ax, dataset, site_key=site_key, transform=transform, xoffset=xoffset, yoffset=yoffset, fontsize=fontsize, horizontalalignment=horizontalalignment, opts=opts)
+        elif bbox_test_key in dataset.metadata['header']:
+            self.plot_bbox_site(fig, ax, dataset, site_key=site_key, transform=transform, xoffset=xoffset, yoffset=yoffset, fontsize=fontsize, horizontalalignment=horizontalalignment, opts=opts)
+        else:
+            raise KeyError(f"Cannot plot site on the map as no spatial coordinate keys were found in the header")
 
     def setup_figure_and_axes(self, figsize=None, width_ratios=[1,1], projection=None):
         """
@@ -270,10 +474,10 @@ class Plot(xp.Plot):
         generate_colors = True
 
         if not title:
-            title = self.get_metadata_item_value(datasets[0], self.DEFAULTS['title_key'])
+            title = datasets[0].get_metadata_item_value(self.DEFAULTS['title_key'])
 
         if not caption:
-            caption = self.get_metadata_item_value(datasets[0], self.DEFAULTS['caption_key'])
+            caption = datasets[0].get_metadata_item_value(self.DEFAULTS['caption_key'])
 
         if not label_key:
             label_key = self.DEFAULTS['label_key']
@@ -299,13 +503,13 @@ class Plot(xp.Plot):
         self.setup_site_plot(self.fig, self.axs[map_axs_idx], self.get_site_plot_extent(datasets))
 
         for i, dataset in enumerate(datasets):
-            label = self.get_metadata_item_value(dataset, label_key)
+            label = dataset.get_metadata_item_value(label_key)
 
             if generate_colors:
                 opts.update({'color': f'C{i}'})
 
             self.plot_data(self.fig, self.axs[axs_idx], dataset, self.xcol, self.ycol, label=label, invert_xaxis=invert_xaxis, invert_yaxis=invert_yaxis, opts=opts)
-            self.plot_site(self.fig, self.axs[map_axs_idx], dataset, opts=opts)
+            self.plot_site(self.fig, self.axs[map_axs_idx], dataset, site_key=label_key, opts=opts)
 
         if show:
             plt.show()
