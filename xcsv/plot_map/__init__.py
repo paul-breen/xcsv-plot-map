@@ -171,14 +171,12 @@ class Plot(xp.Plot):
 
         return extent
 
-    def setup_site_plot(self, fig, ax, extent, crs=None, bg_img_name=None, bg_img_resolution='low', coastlines_resolution='10m', add_gridlines=True):
+    def setup_site_plot(self, ax, extent, crs=None, bg_img_name=None, bg_img_resolution='low', coastlines_resolution='10m', add_gridlines=True, draw_gridline_labels=True):
         """
         Setup the site map
 
         This sets fixed properties of the map, such as extent and base map.
 
-        :param fig: The figure object
-        :type fig: matplotlib.figure.Figure
         :param ax: The axis object
         :type ax: matplotlib.axes.Axes
         :param extent: The geographical bounding box extent for the map
@@ -200,6 +198,8 @@ class Plot(xp.Plot):
         :type coastlines_resolution: str
         :param add_gridlines: Add gridlines to the map
         :type add_gridlines: bool
+        :param draw_gridline_labels: Draw gridline labels on the map
+        :type draw_gridline_labels: bool
         """
 
         if not crs:
@@ -214,14 +214,12 @@ class Plot(xp.Plot):
             ax.stock_img()
 
         if add_gridlines:
-            ax.gridlines()
+            ax.gridlines(draw_labels=draw_gridline_labels)
 
-    def plot_point_site(self, fig, ax, dataset, xkey='longitude', ykey='latitude', site_key='site', transform=None, xoffset=0, yoffset=-0.5, fontsize='large', horizontalalignment='left', opts={}):
+    def plot_point_site(self, ax, dataset, xkey='longitude', ykey='latitude', site_key='site', transform=None, xoffset=0, yoffset=-0.5, fontsize='large', horizontalalignment='left', opts={}):
         """
         Plot the site information for the given dataset on the map
 
-        :param fig: The figure object
-        :type fig: matplotlib.figure.Figure
         :param ax: The axis object
         :type ax: matplotlib.axes.Axes
         :param dataset: The dataset to plot
@@ -264,12 +262,10 @@ class Plot(xp.Plot):
         except KeyError:
             pass
 
-    def plot_bbox_site(self, fig, ax, dataset, xminkey='geospatial_lon_min', xmaxkey='geospatial_lon_max', yminkey='geospatial_lat_min', ymaxkey='geospatial_lat_max', site_key='site', transform=None, xoffset=0, yoffset=-0.5, fontsize='large', horizontalalignment='left', opts={}):
+    def plot_bbox_site(self, ax, dataset, xminkey='geospatial_lon_min', xmaxkey='geospatial_lon_max', yminkey='geospatial_lat_min', ymaxkey='geospatial_lat_max', site_key='site', transform=None, xoffset=0, yoffset=-0.5, fontsize='large', horizontalalignment='left', opts={}):
         """
         Plot the site information for the given dataset on the map
 
-        :param fig: The figure object
-        :type fig: matplotlib.figure.Figure
         :param ax: The axis object
         :type ax: matplotlib.axes.Axes
         :param dataset: The dataset to plot
@@ -324,12 +320,10 @@ class Plot(xp.Plot):
         except KeyError:
             pass
 
-    def plot_site(self, fig, ax, dataset, point_test_key='longitude', bbox_test_key='geospatial_lon_min', site_key='site', transform=None, xoffset=0, yoffset=-0.5, fontsize='large', horizontalalignment='left', opts={}):
+    def plot_site(self, ax, dataset, point_test_key='longitude', bbox_test_key='geospatial_lon_min', site_key='site', transform=None, xoffset=0, yoffset=-0.5, fontsize='large', horizontalalignment='left', opts={}):
         """
         Plot the site information for the given dataset on the map
 
-        :param fig: The figure object
-        :type fig: matplotlib.figure.Figure
         :param ax: The axis object
         :type ax: matplotlib.axes.Axes
         :param dataset: The dataset to plot
@@ -361,13 +355,13 @@ class Plot(xp.Plot):
         # Plot according to whether site coordinates are given by a point
         # or a bounding box
         if point_test_key in dataset.metadata['header']:
-            self.plot_point_site(fig, ax, dataset, site_key=site_key, transform=transform, xoffset=xoffset, yoffset=yoffset, fontsize=fontsize, horizontalalignment=horizontalalignment, opts=opts)
+            self.plot_point_site(ax, dataset, site_key=site_key, transform=transform, xoffset=xoffset, yoffset=yoffset, fontsize=fontsize, horizontalalignment=horizontalalignment, opts=opts)
         elif bbox_test_key in dataset.metadata['header']:
-            self.plot_bbox_site(fig, ax, dataset, site_key=site_key, transform=transform, xoffset=xoffset, yoffset=yoffset, fontsize=fontsize, horizontalalignment=horizontalalignment, opts=opts)
+            self.plot_bbox_site(ax, dataset, site_key=site_key, transform=transform, xoffset=xoffset, yoffset=yoffset, fontsize=fontsize, horizontalalignment=horizontalalignment, opts=opts)
         else:
             raise KeyError(f"Cannot plot site on the map as no spatial coordinate keys were found in the header")
 
-    def setup_figure_and_axes(self, figsize=None, width_ratios=[1,1], projection=None):
+    def setup_figure_and_axes(self, figsize=None, nrows=1, ncols=2, width_ratios=[1,1], projection=None):
         """
         Setup the figure and axes array
 
@@ -381,9 +375,15 @@ class Plot(xp.Plot):
 
         :param figsize: The figure size tuple as (width, height)
         :type figsize: tuple
-        :param width_ratios: The width ratios of the two subplots - the data
-        plot and the map, in that order.  For example, [2,1] will make the
-        plot twice the size of the map
+        :param nrows: The number of rows for the subplots (1 or 2)
+        :type nrows: int
+        :param ncols: The number of columns for the subplots (1 or 2)
+        :type ncols: int
+        :param width_ratios: The width ratios of the subplots.  If there is
+        only one subplot, then it is the map, and this should be [1].  If
+        there are two subplots, then these are the data plot and the map, in
+        that order.  For example, [2,1] will make the plot twice the size of
+        the map
         :type width_ratios: list
         :param projection: The projection to transform the coordinates on the
         map.  If not specified, it defaults to ccrs.PlateCarree()
@@ -394,12 +394,109 @@ class Plot(xp.Plot):
             projection = ccrs.PlateCarree()
 
         self.fig = plt.figure(figsize=figsize)
-        gs = self.fig.add_gridspec(1, 2, width_ratios=width_ratios)
+        gs = self.fig.add_gridspec(nrows=nrows, ncols=ncols, width_ratios=width_ratios)
 
-        self.axs.append(self.fig.add_subplot(gs[0, 0]))
-        self.axs.append(self.fig.add_subplot(gs[0, 1], projection=projection))
+        if nrows * ncols > 1:
+            self.axs.append(self.fig.add_subplot(gs[0, 0]))
+            self.axs.append(self.fig.add_subplot(gs[0, 1], projection=projection))
+        else:
+            self.axs.append(self.fig.add_subplot(gs[0, 0], projection=projection))
 
-    def plot_datasets(self, datasets, fig=None, axs=None, axs_idx=0, map_axs_idx=1, xcol=None, ycol=None, xidx=None, yidx=0, xlabel=None, ylabel=None, title=None, title_wrap=True, caption=None, label_key=None, invert_xaxis=False, invert_yaxis=False, show=True, opts={}):
+    def _setup_fallback_figure_and_axes(self, fig=None, axs=None, plot_on_map=False):
+        """
+        Setup a fallback figure and axes array
+
+        This calls setup_figure_and_axes() if it hasn't already beeen called
+
+        :param fig: The figure object
+        :type fig: matplotlib.figure.Figure
+        :param axs: The axes array
+        :type axs: matplotlib.axes.Axes
+        :param plot_on_map: Only setup a map, as the data are to be plotted
+        directly on the map
+        :type plot_on_map: bool
+        """
+
+        if fig:
+            self.fig = fig
+
+        if axs:
+            self.axs = axs
+
+        if not self.fig or not self.axs:
+            fa_opts = {'nrows': 1, 'ncols': 2, 'width_ratios': [1,1]}
+
+            if plot_on_map:
+                fa_opts = {'nrows': 1, 'ncols': 1, 'width_ratios': [1]}
+
+            self.setup_figure_and_axes(**fa_opts)
+
+    def _add_figure_annotations(self, axs_idx=0, map_axs_idx=1, plot_on_map=False):
+        """
+        Add annotations to the figure
+
+        :param axs_idx: The index of the axis object in the axs array
+        :type axs_idx: int
+        :param map_axs_idx: The index of the map axis object in the axs array
+        :type map_axs_idx: int
+        :param plot_on_map: Only setup a map, as the data are to be plotted
+        directly on the map
+        :type plot_on_map: bool
+        """
+
+        self.add_figure_title(self.title)
+        self.add_figure_caption(self.caption)
+
+        if plot_on_map:
+            self.setup_site_plot(self.axs[axs_idx], self.get_site_plot_extent(self.datasets))
+        else:
+            self.setup_data_plot(self.axs[axs_idx], xlabel=self.xlabel, ylabel=self.ylabel)
+            self.setup_site_plot(self.axs[map_axs_idx], self.get_site_plot_extent(self.datasets))
+
+    def _plot_datasets(self, axs_idx=0, map_axs_idx=1, plot_on_map=False, invert_xaxis=False, invert_yaxis=False, opts={}):
+        """
+        Plot the data for the figure datasets
+
+        :param axs_idx: The index of the axis object in the axs array
+        :type axs_idx: int
+        :param map_axs_idx: The index of the map axis object in the axs array
+        :type map_axs_idx: int
+        :param plot_on_map: Only setup a map, as the data are to be plotted
+        directly on the map
+        :type plot_on_map: bool
+        :param invert_xaxis: Invert the x-axis
+        :type invert_xaxis: bool
+        :param invert_yaxis: Invert the y-axis
+        :type invert_yaxis: bool
+        :param opts: Option kwargs to apply to all plots (e.g., color, marker)
+        :type opts: dict
+        """
+
+        generate_colors = True
+
+        if 'color' in opts:
+            generate_colors = False
+
+        for i, dataset in enumerate(self.datasets):
+            label = dataset.get_metadata_item_value(self.label_key)
+
+            if generate_colors:
+                opts.update({'color': f'C{i}'})
+
+            if plot_on_map:
+                projection = self.axs[axs_idx].projection
+
+                if not projection:
+                    projection = ccrs.PlateCarree()
+
+                opts.update({'transform': projection})
+
+                self.plot_data(self.axs[axs_idx], dataset, self.xcol, self.ycol, label=label, invert_xaxis=invert_xaxis, invert_yaxis=invert_yaxis, opts=opts)
+            else:
+                self.plot_data(self.axs[axs_idx], dataset, self.xcol, self.ycol, label=label, invert_xaxis=invert_xaxis, invert_yaxis=invert_yaxis, opts=opts)
+                self.plot_site(self.axs[map_axs_idx], dataset, site_key=self.label_key, opts=opts)
+
+    def plot_datasets(self, datasets, fig=None, axs=None, axs_idx=0, map_axs_idx=1, xcol=None, ycol=None, xidx=None, yidx=0, xlabel=None, ylabel=None, title=None, caption=None, label_key=None, invert_xaxis=False, invert_yaxis=False, plot_on_map=False, show=True, opts={}):
         """
         Plot the data for the given datasets
 
@@ -442,8 +539,6 @@ class Plot(xp.Plot):
         :type ylabel: str
         :param title: The figure title text
         :type title: str
-        :param title_wrap: Wrap the title text
-        :type title_wrap: bool
         :param caption: The figure caption text
         :type caption: str
         :param label_key: The key of a header item in the XCSV header to be
@@ -453,63 +548,20 @@ class Plot(xp.Plot):
         :type invert_xaxis: bool
         :param invert_yaxis: Invert the y-axis
         :type invert_yaxis: bool
+        :param plot_on_map: Instead of plotting the data on a plot alongside
+        the site map, show just a map and plot the data directly on the map.
+        This requires the data to be coordinates
+        :type plot_on_map: bool
         :param show: Show the plot
         :type show: bool
         :param opts: Option kwargs to apply to all plots (e.g., color, marker)
         :type opts: dict
         """
- 
-        if fig:
-            self.fig = fig
 
-        if axs:
-            self.axs = axs
-
-        if not self.fig or not self.axs:
-            self.setup_figure_and_axes()
-
-        self.datasets = datasets
-        self.xcol = xcol
-        self.ycol = ycol
-        generate_colors = True
-
-        if not title:
-            title = datasets[0].get_metadata_item_value(self.DEFAULTS['title_key'])
-
-        if not caption:
-            caption = datasets[0].get_metadata_item_value(self.DEFAULTS['caption_key'])
-
-        if not label_key:
-            label_key = self.DEFAULTS['label_key']
-
-        if not xcol:
-            if xidx is not None:
-                self.xcol = datasets[0].data.iloc[:, xidx].name
-
-        if not ycol:
-            self.ycol = datasets[0].data.iloc[:, yidx].name
-
-        if not xlabel:
-            xlabel = self.xcol
-
-        if not ylabel:
-            ylabel = self.ycol
-
-        if 'color' in opts:
-            generate_colors = False
-
-        self.fig.suptitle(title, wrap=title_wrap)
-        self.setup_data_plot(self.fig, self.axs[axs_idx], caption=caption, xlabel=xlabel, ylabel=ylabel)
-        self.setup_site_plot(self.fig, self.axs[map_axs_idx], self.get_site_plot_extent(datasets))
-
-        for i, dataset in enumerate(datasets):
-            label = dataset.get_metadata_item_value(label_key)
-
-            if generate_colors:
-                opts.update({'color': f'C{i}'})
-
-            self.plot_data(self.fig, self.axs[axs_idx], dataset, self.xcol, self.ycol, label=label, invert_xaxis=invert_xaxis, invert_yaxis=invert_yaxis, opts=opts)
-            self.plot_site(self.fig, self.axs[map_axs_idx], dataset, site_key=label_key, opts=opts)
+        self._setup_fallback_figure_and_axes(fig, axs, plot_on_map)
+        self._store_figure_parameters(datasets, xcol, ycol, xidx, yidx, xlabel, ylabel, title, caption, label_key)
+        self._add_figure_annotations(axs_idx, map_axs_idx, plot_on_map)
+        self._plot_datasets(axs_idx, map_axs_idx, plot_on_map, invert_xaxis, invert_yaxis, opts)
 
         if show:
             plt.show()

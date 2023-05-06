@@ -74,7 +74,7 @@ usage: xcsv_plot_map [-h] [-x XIDX | -X XCOL] [-y YIDX | -Y YCOL]
                      [--x-label XLABEL] [--y-label YLABEL] [--invert-x-axis]
                      [--invert-y-axis] [--title TITLE] [--caption CAPTION]
                      [--label-key LABEL_KEY] [-s FIGSIZE FIGSIZE]
-                     [-p PROJECTION] [-b BG_IMG_PATH] [-o OUT_FILE]
+                     [-p PROJECTION] [-m] [-b BG_IMG_PATH] [-o OUT_FILE]
                      [-P PLOT_OPTS] [-S] [-V]
                      in_file [in_file ...]
 
@@ -110,6 +110,8 @@ optional arguments:
                         projection to use for displaying the site coordinates
                         on the map (one of the CRS classes provided by
                         Cartopy)
+  -m, --plot-on-map     instead of a plot alongside a site map, show just a
+                        map and plot the coordinate data directly on the map
   -b BG_IMG_PATH, --background-image BG_IMG_PATH
                         path to an image to show in the background of the plot
   -o OUT_FILE, --out-file OUT_FILE

@@ -225,3 +225,13 @@ def test_get_site_plot_extent_from_bbox_no_units_coord(short_bbox_coord_no_units
     actual = p.get_site_plot_extent_from_bbox(short_bbox_coord_no_units_test_data)
     assert actual == expected
 
+@pytest.mark.parametrize(['plot_on_map','expected'], [
+(False, 2),
+(True, 1)
+])
+def test__setup_fallback_figure_and_axes(plot_on_map, expected):
+    p = xpm.Plot()
+    p._setup_fallback_figure_and_axes(plot_on_map=plot_on_map)
+    actual = len(p.axs)
+    assert actual == expected
+

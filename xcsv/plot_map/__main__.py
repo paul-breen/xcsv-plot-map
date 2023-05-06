@@ -97,6 +97,8 @@ python3 -m xcsv.plot_map -x 0 -y 1 input.csv
     parser.add_argument('-s', '--figsize', help='size of the figure (width height)', dest='figsize', nargs=2, default=None, type=int)
     parser.add_argument('-p', '--map-projection', help='projection to use for displaying the site coordinates on the map (one of the CRS classes provided by Cartopy)', dest='projection', default=None, type=str)
 
+    parser.add_argument('-m', '--plot-on-map', help='instead of a plot alongside a site map, show just a map and plot the coordinate data directly on the map', dest='plot_on_map', action='store_true', default=False)
+
     parser.add_argument('-b', '--background-image', help='path to an image to show in the background of the plot', dest='bg_img_path', default=None, type=str)
 
     parser.add_argument('-o', '--out-file', help='output plot file')
@@ -119,15 +121,18 @@ def main():
     datasets = get_datasets(args.in_file)
     plotter = xpm.Plot()
 
-    if args.figsize or args.projection:
+    if args.figsize or args.projection or args.plot_on_map:
+        fa_opts = {'figsize': args.figsize}
+
         if args.projection:
-            projection = xpm.Plot().get_crs_class_from_string(args.projection)
-        else:
-            projection = None
+            fa_opts['projection'] = xpm.Plot().get_crs_class_from_string(args.projection)
 
-        plotter.setup_figure_and_axes(figsize=args.figsize, projection=projection)
+        if args.plot_on_map:
+            fa_opts.update({'nrows': 1, 'ncols': 1, 'width_ratios': [1]})
 
-    plotter.plot_datasets(datasets, xidx=args.xidx, yidx=args.yidx, xcol=args.xcol, ycol=args.ycol, xlabel=args.xlabel, ylabel=args.ylabel, title=args.title, title_wrap=True, caption=args.caption, label_key=args.label_key, invert_xaxis=args.invert_xaxis, invert_yaxis=args.invert_yaxis, show=False, opts=args.plot_opts)
+        plotter.setup_figure_and_axes(**fa_opts)
+
+    plotter.plot_datasets(datasets, xidx=args.xidx, yidx=args.yidx, xcol=args.xcol, ycol=args.ycol, xlabel=args.xlabel, ylabel=args.ylabel, title=args.title, caption=args.caption, label_key=args.label_key, invert_xaxis=args.invert_xaxis, invert_yaxis=args.invert_yaxis, plot_on_map=args.plot_on_map, show=False, opts=args.plot_opts)
 
     if args.bg_img_path:
         plotter.add_plot_bg(img_path=args.bg_img_path)
