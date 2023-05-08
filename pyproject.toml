@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "xcsv-plot-map"
-version = "0.3.0"
+version = "0.4.0"
 description = "Subpackage to plot and locate on a map, data from extended CSV (XCSV) files"
 authors = ["Paul Breen <pbree@bas.ac.uk>"]
 readme = "README.md"
