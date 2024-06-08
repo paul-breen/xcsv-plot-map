@@ -387,7 +387,7 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.11"
-content-hash = "6f796fbe08dfef3aa168356267b8235eebe86e2a22fd9b5df09496e867d4e97c"
+content-hash = "53ac8ebbb46c43a270c3cbc36dc3fe3313edb6db62d4e9d1c2896e2e73776144"
 
 [metadata.files]
 atomicwrites = [
