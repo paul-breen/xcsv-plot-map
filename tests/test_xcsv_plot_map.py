@@ -9,7 +9,7 @@ import xcsv.plot_map as xpm
 base = os.path.dirname(__file__)
 
 def test_version():
-    assert xpm.__version__ == '0.4.0'
+    assert xpm.__version__ == '0.4.2'
 
 @pytest.fixture
 def short_point_test_datasets():
