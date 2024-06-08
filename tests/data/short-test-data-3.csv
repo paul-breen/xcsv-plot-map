@@ -4,6 +4,7 @@
 # The second summary paragraph.
 # : The third summary paragraph.  Escaped because it contains the delimiter in a URL https://dummy.domain
 # authors: A B, C D
+# institution: BAS (British Antarctic Survey).
 # latitude: -74.45 (degree_north)
 # longitude: -78.16 (degree_east)
 # elevation: 1006 (m a.s.l.)
